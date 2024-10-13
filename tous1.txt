@@ -1,0 +1,771 @@
+PARTIE 1 
+
+
+```html
+
+
+TESTS-SOLUTION-FINAL
+│
+└───src
+    │
+    └───main
+        │
+        └───java
+        │   └───com
+        │       └───luv2code
+        │           └───springmvc
+        │               ├───controller
+        │               │   └───GradebookController.java
+        │               │
+        │               └───models
+        │                   ├───CollegeStudent.java
+        │                   ├───Grade.java
+        │                   ├───Gradebook.java
+        │                   ├───GradebookCollegeStudent.java
+        │                   ├───HistoryGrade.java
+        │                   ├───MathGrade.java
+        │                   ├───ScienceGrade.java
+        │                   ├───Student.java
+        │                   └───StudentGrades.java
+        │
+        └───repository
+        │   ├───HistoryGradesDao.java
+        │   ├───MathGradesDao.java
+        │   ├───ScienceGradesDao.java
+        │   └───StudentDao.java
+        │
+        └───service
+        │   ├───StudentAndGradeService.java
+        │   └───MvcTestingExampleApplication.java
+        │
+        └───resources
+            ├───static
+            │   └───cssandjs
+            │       ├───main.js
+            │       └───main.css
+            │
+            └───templates
+                ├───error.html
+                ├───index.html
+                ├───studentInformation.html
+            ├───application-test.properties
+            ├───application.properties
+            ├───insertData.sql
+            ├───insertGrade.sql
+            ├───overRideData.sql
+
+    └───test
+        └───java
+            └───com
+                └───luv2code
+                    └───springmvc
+                        ├───GradebookControllerTest.java
+                        └───StudentAndGradeServiceTest.java
+
+└───target
+    └───classes
+        ├───com
+        │   └───luv2code
+        │       └───springmvc
+        │           ├───controller
+        │           ├───models
+        │           ├───repository
+        │           ├───service
+        │           └───MvcTestingExampleApplication.class
+        ├───static
+        │   ├───cssandjs
+        │   │   ├───main.js
+        │   │   └───main.css
+        └───templates
+            ├───error.html
+            ├───index.html
+            ├───studentInformation.html
+        ├───application-test.properties
+        ├───application.properties
+        ├───insertData.sql
+        ├───insertGrade.sql
+        ├───overRideData.sql
+        ├───generated-sources
+        ├───generated-test-sources
+        ├───maven-status
+        ├───surefire-reports
+            ├───com.luv2code.springmvc.GradebookControllerTest.txt
+            ├───com.luv2code.springmvc.StudentAndGradeServiceTest.txt
+            ├───TEST-com.luv2code.springmvc.GradebookControllerTest.xml
+            ├───TEST-com.luv2code.springmvc.StudentAndGradeServiceTest.xml
+        └───test-classes
+            └───com
+                └───luv2code
+                    └───springmvc
+                        └───GradebookControllerTest.class
+
+
+```
+
+
+
+
+
+-------------------------------------------------
+Controller
+-------------------------------------------------
+
+==> GradebookController
+
+
+-------------------------------------------------
+Model
+-------------------------------------------------
+
+==> CollegeStudent
+==> Grade
+==> Gradebook
+==> GradebookCollegeStudent
+==> HistoryGrade
+==> MathGrade
+==> ScienceGrade
+==> Student
+==> StudentGrades
+
+
+
+-------------------------------------------------
+Repository
+-------------------------------------------------
+
+==> HistoryGradesDao
+==> MathGradesDao
+==> ScienceGradesDao
+==> StudentDao
+
+-------------------------------------------------
+Service
+-------------------------------------------------
+
+==> StudentAndGradeService
+
+
+-------------------------------------------------
+MvcTestingExampleApplication (classe principale)
+-------------------------------------------------
+
+==> MvcTestingExampleApplication
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------------
+Controller
+-------------------------------------------------
+
+package com.luv2code.springmvc.controller;
+
+import com.luv2code.springmvc.models.*;
+import com.luv2code.springmvc.service.StudentAndGradeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+public class GradebookController {
+
+	@Autowired
+	private StudentAndGradeService studentService;
+
+	@Autowired
+	private Gradebook gradebook;
+
+
+	@RequestMapping(value = "/", method = RequestMethod.GET)
+	public String getStudents(Model m) {
+		gradebook = studentService.getGradebook();
+		m.addAttribute("students", gradebook.getStudents());
+		return "index";
+	}
+
+
+	@GetMapping("/studentInformation/{id}")
+		public String studentInformation(@PathVariable int id, Model m) {
+
+		if (!studentService.checkIfStudentIsNull(id)) {
+			return "error";
+		}
+
+		studentService.configureStudentInformationModel(id, m);
+
+		return "studentInformation";
+		}
+
+
+	@PostMapping(value = "/")
+	public String createStudent(@ModelAttribute("student") CollegeStudent student,
+								Model m) {
+
+		studentService.createStudent(student.getFirstname(), student.getLastname(), student.getEmailAddress());
+		gradebook = studentService.getGradebook();
+		m.addAttribute("students", gradebook.getStudents());
+		return "index";
+	}
+
+
+	@GetMapping("/delete/student/{id}")
+	public String deleteStudent(@PathVariable int id, Model m) {
+
+		if (!studentService.checkIfStudentIsNull(id)) {
+			return "error";
+		}
+
+		studentService.deleteStudent(id);
+		gradebook = studentService.getGradebook();
+		m.addAttribute("students", gradebook.getStudents());
+		return "index";
+	}
+
+
+	@PostMapping(value = "/grades")
+	public String createGrade(@RequestParam("grade") double grade,
+							@RequestParam("gradeType") String gradeType,
+							@RequestParam("studentId") int studentId,
+							Model m) {
+
+		if (!studentService.checkIfStudentIsNull(studentId)) {
+			return "error";
+		}
+
+		boolean success = studentService.createGrade(grade, studentId, gradeType);
+
+		if (!success) {
+			return "error";
+		}
+
+		studentService.configureStudentInformationModel(studentId, m);
+
+		return "studentInformation";
+	}
+
+	@GetMapping("/grades/{id}/{gradeType}")
+	public String deleteGrade(@PathVariable int id, @PathVariable String gradeType, Model m) {
+
+		int studentId = studentService.deleteGrade(id, gradeType);
+
+		if (studentId == 0) {
+			return "error";
+		}
+
+		studentService.configureStudentInformationModel(studentId, m);
+		return "studentInformation";
+	}
+}
+
+
+
+
+-------------------------------------------------
+Model
+-------------------------------------------------
+
+==> CollegeStudent
+
+
+package com.luv2code.springmvc.models;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "student")
+public class CollegeStudent implements Student {
+    @Id
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private int id;
+    @Column
+    private String firstname;
+    @Column
+    private String lastname;
+    @Column(name="email_address")
+    private String emailAddress;
+
+    public CollegeStudent() {
+
+    }
+
+    public CollegeStudent(String firstname, String lastname, String emailAddress) {
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.emailAddress = emailAddress;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getFirstname() {
+        return firstname;
+    }
+
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
+    }
+
+    public String getLastname() {
+        return lastname;
+    }
+
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
+    }
+
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
+    }
+
+
+    public String getFullName() {
+        return getFirstname() + " " + getLastname();
+    }
+
+    @Override
+    public String toString() {
+        return "CollegeStudent{" +
+                "id=" + id +
+                ", firstname='" + firstname + '\'' +
+                ", lastname='" + lastname + '\'' +
+                ", emailAddress='" + emailAddress + '\'' +
+                '}';
+    }
+
+    public String studentInformation() {
+       return getFullName() + " " + getEmailAddress();
+    }
+}
+
+
+
+
+==> Grade
+
+package com.luv2code.springmvc.models;
+
+public interface Grade {
+    double getGrade();
+
+    int getId();
+
+    void setId(int id);
+
+    int getStudentId();
+
+    void setStudentId(int studentId);
+
+    void setGrade(double grade);
+}
+
+
+
+==> Gradebook
+
+package com.luv2code.springmvc.models;
+
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class Gradebook {
+
+    private List<GradebookCollegeStudent> students = new ArrayList<>();
+
+    public Gradebook() {
+
+    }
+    public Gradebook(List<GradebookCollegeStudent> students) {
+        this.students = students;
+    }
+
+    public List<GradebookCollegeStudent> getStudents() {
+        return students;
+    }
+
+    public void setStudents(List<GradebookCollegeStudent> students) {
+        this.students = students;
+    }
+}
+
+
+==> GradebookCollegeStudent
+
+
+package com.luv2code.springmvc.models;
+
+public class GradebookCollegeStudent extends CollegeStudent{
+
+    private int id;
+
+    private StudentGrades studentGrades;
+
+    public GradebookCollegeStudent(String firstname, String lastname, String emailAddress) {
+        super(firstname, lastname, emailAddress);
+    }
+
+    public GradebookCollegeStudent(int id, String firstname, String lastname, String emailAddress, StudentGrades studentGrades) {
+        super(firstname, lastname, emailAddress);
+        this.studentGrades = studentGrades;
+        this.id = id;
+    }
+
+    public StudentGrades getStudentGrades() {
+        return studentGrades;
+    }
+
+    public void setStudentGrades(StudentGrades studentGrades) {
+        this.studentGrades = studentGrades;
+    }
+
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(int id) {
+        this.id = id;
+    }
+}
+
+
+==> HistoryGrade
+
+package com.luv2code.springmvc.models;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "history_grade")
+public class HistoryGrade implements Grade {
+    @Id
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private int id;
+    @Column(name="student_id")
+    private int studentId;
+    @Column(name="grade")
+    private double grade;
+
+    public HistoryGrade() {
+
+    }
+
+    public HistoryGrade(double grade) {
+        this.grade = grade;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
+    }
+
+    @Override
+    public double getGrade() {
+        return grade;
+    }
+
+    public void setGrade(double grade) {
+        this.grade = grade;
+    }
+}
+
+
+==> MathGrade
+
+package com.luv2code.springmvc.models;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "math_grade")
+public class MathGrade implements Grade {
+    @Id
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private int id;
+    @Column(name="student_id")
+    private int studentId;
+    @Column(name="grade")
+    private double grade;
+
+    public MathGrade() {
+
+    }
+
+    public MathGrade(double grade) {
+        this.grade = grade;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
+    }
+
+    @Override
+    public double getGrade() {
+        return grade;
+    }
+
+    public void setGrade(double grade) {
+        this.grade = grade;
+    }
+}
+
+
+
+==> ScienceGrade
+
+package com.luv2code.springmvc.models;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "science_grade")
+public class ScienceGrade implements Grade {
+    @Id
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private int id;
+    @Column(name="student_id")
+    private int studentId;
+    @Column(name="grade")
+    private double grade;
+
+    public ScienceGrade() {
+
+    }
+
+    public ScienceGrade(double grade) {
+        this.grade = grade;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(int studentId) {
+        this.studentId = studentId;
+    }
+
+    @Override
+    public double getGrade() {
+        return grade;
+    }
+
+    public void setGrade(double grade) {
+        this.grade = grade;
+    }
+}
+
+
+==> Student
+
+package com.luv2code.springmvc.models;
+
+public interface Student {
+
+   String studentInformation();
+
+   String getFullName();
+
+}
+
+
+==> StudentGrades
+
+
+package com.luv2code.springmvc.models;
+
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+
+@Component
+public class StudentGrades {
+
+    private List<Grade> mathGradeResults;
+
+    private List<Grade> scienceGradeResults;
+
+    private List<Grade> historyGradeResults;
+
+    public StudentGrades() {}
+
+    public double addGradeResultsForSingleClass(List<Grade> grades) {
+        double result = 0;
+        for (Grade i : grades) {
+            result += i.getGrade();
+        }
+        return result;
+    }
+
+    public double findGradePointAverage (List<Grade> grades ) {
+        int lengthOfGrades = grades.size();
+        double sum = addGradeResultsForSingleClass(grades);
+        double result = sum / lengthOfGrades;
+
+        // add a round function
+        BigDecimal resultRound = BigDecimal.valueOf(result);
+        resultRound = resultRound.setScale(2, RoundingMode.HALF_UP);
+        return resultRound.doubleValue();
+
+    }
+
+    public List<Grade> getMathGradeResults() {
+        return mathGradeResults;
+    }
+
+    public void setMathGradeResults(List<Grade> mathGradeResults) {
+        this.mathGradeResults = mathGradeResults;
+    }
+
+    public List<Grade> getScienceGradeResults() {
+        return scienceGradeResults;
+    }
+
+    public void setScienceGradeResults(List<Grade> scienceGradeResults) {
+        this.scienceGradeResults = scienceGradeResults;
+    }
+
+    public List<Grade> getHistoryGradeResults() {
+        return historyGradeResults;
+    }
+
+    public void setHistoryGradeResults(List<Grade> historyGradeResults) {
+        this.historyGradeResults = historyGradeResults;
+    }
+
+    @Override
+    public String toString() {
+        return "StudentGrades{" +
+                "mathGradeResults=" + mathGradeResults +
+                '}';
+    }
+}
+
+
+-------------------------------------------------
+Repository
+-------------------------------------------------
+
+==> HistoryGradesDao
+
+package com.luv2code.springmvc.repository;
+
+import com.luv2code.springmvc.models.HistoryGrade;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface HistoryGradesDao extends CrudRepository<HistoryGrade, Integer> {
+
+    public Iterable<HistoryGrade> findGradeByStudentId (int id);
+
+    public void deleteByStudentId(int id);
+} JE TAI DEONNE LA PARTIE 1 ATTEND POUR LA PARTIE 2  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
